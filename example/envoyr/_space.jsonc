@@ -1,0 +1,10 @@
+{
+    "$schema": "../../schema.json", 
+    "dependencies": [
+        {
+            "keys": [],
+            "name": "",
+            "template": ""
+        }
+    ]
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "_space.jsonc Schema",
+  "description": "Schema for validating the _space.jsonc configuration file in Envoyr.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "The URI / file path of the JSON schema for the _space.jsonc file."
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "List of dependencies for the space. Each dependency can be a string or an object with additional configuration.",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "A string representing the path to a dependency."
+          },
+          {
+            "type": "object",
+            "description": "An object representing a dependency with additional options.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The path to the dependency, relative or absolute."
+              },
+              "template": {
+                "type": "string",
+                "description": "A template string for renaming variables from the dependency. Use `{}` as a placeholder for the variable name."
+              },
+              "keys": {
+                "type": "array",
+                "description": "List of specific keys (variables) to include from the dependency.",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "environments": {
+      "type": "array",
+      "description": "List of environments supported by the space.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "mapping": {
+      "type": "array",
+      "description": "Mappings of environments from this space to environments in dependencies.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The source environment name in the current space."
+          },
+          "to": {
+            "type": "string",
+            "description": "The target environment name in the dependency."
+          }
+        },
+        "required": ["from", "to"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": []
+}
