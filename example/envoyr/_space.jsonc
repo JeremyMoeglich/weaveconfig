@@ -1,10 +1,4 @@
 {
-    "$schema": "../../schema.json", 
-    "dependencies": [
-        {
-            "keys": [],
-            "name": "",
-            "template": ""
-        }
-    ]
+	"$schema": "../../schema.json",
+	"environments": ["test"]
 }

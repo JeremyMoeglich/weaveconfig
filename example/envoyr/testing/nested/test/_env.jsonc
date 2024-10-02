@@ -1,0 +1,78 @@
+{
+    "string": "Hello, world!",
+    "number": 12345,
+    "float": 123.45,
+    "boolean_true": true,
+    "boolean_false": false,
+    "null_value": null,
+    "array_mixed": [
+      "string",
+      123,
+      456.78,
+      false,
+      null,
+      { "nested_object": "value" }
+    ],
+    "nested_object": {
+      "level1": {
+        "level2": {
+          "level3": {
+            "key": "deep_value"
+          }
+        }
+      }
+    },
+    "unicode_characters": {
+      "japanese": "こんにちは世界", // "Hello, world!" in Japanese
+      "emoji": "😊🚀🌍",
+      "special_symbols": "@#$%^&*()_+[]{}|;':,./<>?",
+      "escaped_characters": "newline\n tab\t backslash\\ double-quote\""
+    },
+    "empty_string": "",
+    "empty_object": {},
+    "empty_array": [],
+    "boolean_keys": {
+      "true": "This is true as a key",
+      "false": "This is false as a key"
+    },
+    "keys_with_spaces": {
+      "key with spaces": "Value with spaces"
+    },
+    "keys-with-hyphens": {
+      "key-with-hyphens": "Value with hyphens"
+    },
+    "keys_with_underscores": {
+      "key_with_underscores": "Value with underscores"
+    },
+    "keysWithCamelCase": {
+      "camelCaseKey": "Value in camelCase"
+    },
+    "mixed_array_complex": [
+      {
+        "id": 1,
+        "name": "Alice",
+        "interests": ["Reading", "Traveling"]
+      },
+      {
+        "id": 2,
+        "name": "Bob",
+        "interests": ["Gaming", { "nested_interest": "Chess" }]
+      },
+      "String in array",
+      987,
+      true,
+      null,
+      [1, 2, 3]
+    ],
+    "boolean_values_array": [true, false, false, true],
+    "unicode_keys": {
+      "ключ": "value in Russian", // "key" in Russian
+      "مفتاح": "value in Arabic", // "key" in Arabic
+      "πλήκτρο": "value in Greek" // "key" in Greek
+    },
+    "complex_number_keys": {
+      "key_1.0": "Floating point key",
+      "key-2e10": "Scientific notation key"
+    }
+  }
+  

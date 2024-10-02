@@ -8,8 +8,11 @@ edition = "2021"
 cargo-fuzz = true
 
 [dependencies]
-jemallocator = "0.5.4"
 libfuzzer-sys = "0.4"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+jemallocator = "0.5.4"
+
 
 [dependencies.envoyr]
 path = ".."
@@ -20,6 +23,3 @@ path = "fuzz_targets/fuzz_target_1.rs"
 test = false
 doc = false
 bench = false
-
-
-

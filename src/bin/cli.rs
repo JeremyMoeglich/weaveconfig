@@ -1,9 +1,12 @@
 use std::path::{Path, PathBuf};
 
+#[cfg(target_os = "linux")]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-use clap::{arg, command, Arg};
+use anyhow::Context;
+use clap::{arg, command};
+use envoyr::{graph::create_graph, resolve_spaces::resolve_spaces, write_env_file::write_env_file};
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -18,10 +21,17 @@ async fn main() -> Result<(), anyhow::Error> {
     let path = matches.get_one::<String>("path").unwrap_or(&current_dir);
 
     let path = Path::new(path);
-    let path = path.canonicalize().unwrap();
-    let root = locate_root(&path).unwrap();
-    println!("Root: {}", root.display());
-
+    let path = path
+        .canonicalize()
+        .with_context(|| format!("Failed to canonicalize path: {:?}", path))?;
+    let root = locate_root(&path)
+        .with_context(|| format!("Failed to locate root, starting from {:?}", path.display()))?;
+    let envoyr_config_root = root.join("envoyr");
+    let graph = create_graph(envoyr_config_root).await?;
+    let spaces = resolve_spaces(&graph)?;
+    for space in spaces.values() {
+        write_env_file(space).await?;
+    }
     Ok(())
 }
 

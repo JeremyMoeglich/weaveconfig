@@ -1,0 +1,83 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug executable 'fuzz_target_1'",
+			"cargo": {
+				"args": ["build", "--bin=fuzz_target_1", "--package=envoyr-fuzz"],
+				"filter": {
+					"name": "fuzz_target_1",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug unit tests in executable 'fuzz_target_1'",
+			"cargo": {
+				"args": [
+					"test",
+					"--no-run",
+					"--bin=fuzz_target_1",
+					"--package=envoyr-fuzz"
+				],
+				"filter": {
+					"name": "fuzz_target_1",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug unit tests in library 'envoyr'",
+			"cargo": {
+				"args": ["test", "--no-run", "--lib", "--package=envoyr"],
+				"filter": {
+					"name": "envoyr",
+					"kind": "lib"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug executable 'cli'",
+			"cargo": {
+				"args": ["build", "--bin=cli", "--package=envoyr"],
+				"filter": {
+					"name": "cli",
+					"kind": "bin"
+				}
+			},
+			"args": ["./example"],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug unit tests in executable 'cli'",
+			"cargo": {
+				"args": ["test", "--no-run", "--bin=cli", "--package=envoyr"],
+				"filter": {
+					"name": "cli",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		}
+	]
+}

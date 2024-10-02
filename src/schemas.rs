@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf};
 
 use crate::graph::{Dependency, Space};
 
@@ -17,6 +17,7 @@ struct MappingSchema {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(untagged)]
 enum DependencySchema {
     Path(PathBuf),
     DependencyObject(DependencyObjectSchema),
@@ -39,7 +40,7 @@ impl SpaceSchema {
                 .map(|d| d.into_dependency())
                 .collect::<Result<Vec<Dependency>, std::io::Error>>()?,
             mapping: self.mapping.map(|m| {
-                let mut map = HashMap::new();
+                let mut map = BTreeMap::new();
                 for mapping in m {
                     map.entry(mapping.from).or_insert(vec![]).push(mapping.to);
                 }
@@ -61,9 +62,6 @@ impl DependencySchema {
                 dependency_object.keys,
             ),
         };
-
-        // check if path exists
-        let path = std::fs::canonicalize(path)?;
 
         Ok(Dependency {
             path,
