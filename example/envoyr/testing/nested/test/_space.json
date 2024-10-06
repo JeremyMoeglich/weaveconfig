@@ -1,5 +1,0 @@
-{
-  "$schema": "../../../../../schema.json",
-  "environments": ["test2"],
-  "dependencies": ["C:\\Users\\moeglich\\dev\\Envoyr\\example\\envoyr"]
-}

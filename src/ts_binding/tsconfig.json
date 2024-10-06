@@ -1,0 +1,9 @@
+{
+    "include": [
+        "*.ts",
+        "./global.d.ts"
+    ],
+    "compilerOptions": {
+        "module": "ESNext"
+    }
+}

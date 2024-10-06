@@ -1,0 +1,11 @@
+{
+    "variable1": "value1",
+    "variable2": "value2",
+    "dev": {
+        "test": "value3"
+    },
+    "test": {
+        "randomkey": "randomvalue"
+    },
+    "some_var": "some_value"
+}

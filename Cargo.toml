@@ -1,31 +1,41 @@
 [package]
-name = "envoyr"
+name = "weaveconfig"
 version = "0.1.0"
 edition = "2021"
+description = "A unified configuration tool for monorepos"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/JeremyMoeglich/Weaveconfig"
 
 [dependencies]
 anyhow = "1.0.89"
 arbitrary = { version = "1.3.2", features = ["derive"] }
+biome_formatter = "0.5.7"
+biome_js_formatter = "0.5.7"
+biome_js_parser = "0.5.7"
+biome_js_syntax = "0.5.7"
 clap = { version = "4.5.18", features = ["cargo"] }
 fjson = "0.3.1"
 futures = "0.3.30"
-lexical = "7.0.2"
+lazy_static = "1.5.0"
+regex = "1.11.0"
 serde = { version = "1.0.210", features = ["derive"] }
 serde-hjson = "1.1.0"
 serde_json = "1.0.128"
+thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 jemallocator = { version = "0.5.4" }
 
 [workspace]
-members = ["fuzz"]
+members = ["fuzz", "parser_tests", "parser_tests/cases/rust"]
 
 [profile.release]
 opt-level = 3
 lto = "thin"
 debug = true
 
-[profile.release.package.envoyr]
+[profile.release.package.weaveconfig]
 opt-level = 1
 debug = true

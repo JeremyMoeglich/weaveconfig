@@ -1,0 +1,9 @@
+{
+	"$schema": "../../schema.json",
+	"name": "root",
+	"environments": [
+		"test",
+		"dev",
+		"prod"
+	]
+}

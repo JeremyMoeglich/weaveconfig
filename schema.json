@@ -1,47 +1,38 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "_space.jsonc Schema",
-  "description": "Schema for validating the _space.jsonc configuration file in Envoyr.",
+  "description": "Schema for validating the _space.jsonc configuration file in weaveconfig.",
   "type": "object",
   "properties": {
-    "$schema": {
+    "name": {
       "type": "string",
-      "description": "The URI / file path of the JSON schema for the _space.jsonc file."
+      "description": "The name of the space. This is used to identify the space in the graph. Dependencies reference spaces by their name. It must be unique within the graph."
     },
     "dependencies": {
       "type": "array",
-      "description": "List of dependencies for the space. Each dependency can be a string or an object with additional configuration.",
+      "description": "List of dependencies for the space. Each element must be a name of another space.",
       "items": {
-        "oneOf": [
-          {
+        "type": "string",
+        "description": "A string representing the name of a dependency space."
+      }
+    },
+    "mapping": {
+      "type": "array",
+      "description": "Mappings of environments from this space to environments in dependencies.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
             "type": "string",
-            "description": "A string representing the path to a dependency."
+            "description": "The name of the environment in the dependency."
           },
-          {
-            "type": "object",
-            "description": "An object representing a dependency with additional options.",
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "The path to the dependency, relative or absolute."
-              },
-              "template": {
-                "type": "string",
-                "description": "A template string for renaming variables from the dependency. Use `{}` as a placeholder for the variable name."
-              },
-              "keys": {
-                "type": "array",
-                "description": "List of specific keys (variables) to include from the dependency.",
-                "items": {
-                  "type": "string"
-                },
-                "minItems": 1
-              }
-            },
-            "required": ["path"],
-            "additionalProperties": false
+          "to": {
+            "type": "string",
+            "description": "The name of the environment in this space."
           }
-        ]
+        },
+        "required": ["from", "to"],
+        "additionalProperties": false
       }
     },
     "environments": {
@@ -54,26 +45,28 @@
       "uniqueItems": true,
       "minItems": 1
     },
-    "mapping": {
-      "type": "array",
-      "description": "Mappings of environments from this space to environments in dependencies.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "type": "string",
-            "description": "The source environment name in the current space."
-          },
-          "to": {
-            "type": "string",
-            "description": "The target environment name in the dependency."
-          }
+    "generate": {
+      "description": "Generate configurations or files for the space.",
+      "oneOf": [
+        {
+          "type": "boolean",
+          "description": "A boolean indicating whether to generate default configurations."
         },
-        "required": ["from", "to"],
-        "additionalProperties": false
-      }
+        {
+          "type": "object",
+          "description": "Object providing options for generating configurations.",
+          "properties": {
+            "typescript": {
+              "type": "boolean",
+              "description": "Whether to generate TypeScript bindings."
+            }
+          },
+          "required": ["typescript"],
+          "additionalProperties": false
+        }
+      ]
     }
   },
-  "additionalProperties": false,
-  "required": []
+  "required": ["name"],
+  "additionalProperties": false
 }

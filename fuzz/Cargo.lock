@@ -137,7 +137,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "envoyr"
+name = "weaveconfig"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -150,10 +150,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "envoyr-fuzz"
+name = "weaveconfig-fuzz"
 version = "0.0.0"
 dependencies = [
- "envoyr",
+ "weaveconfig",
  "libfuzzer-sys",
 ]
 

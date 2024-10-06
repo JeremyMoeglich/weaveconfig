@@ -9,7 +9,7 @@
 			"request": "launch",
 			"name": "Debug executable 'fuzz_target_1'",
 			"cargo": {
-				"args": ["build", "--bin=fuzz_target_1", "--package=envoyr-fuzz"],
+				"args": ["build", "--bin=fuzz_target_1", "--package=weaveconfig-fuzz"],
 				"filter": {
 					"name": "fuzz_target_1",
 					"kind": "bin"
@@ -27,7 +27,7 @@
 					"test",
 					"--no-run",
 					"--bin=fuzz_target_1",
-					"--package=envoyr-fuzz"
+					"--package=weaveconfig-fuzz"
 				],
 				"filter": {
 					"name": "fuzz_target_1",
@@ -40,11 +40,11 @@
 		{
 			"type": "lldb",
 			"request": "launch",
-			"name": "Debug unit tests in library 'envoyr'",
+			"name": "Debug unit tests in library 'weaveconfig'",
 			"cargo": {
-				"args": ["test", "--no-run", "--lib", "--package=envoyr"],
+				"args": ["test", "--no-run", "--lib", "--package=weaveconfig"],
 				"filter": {
-					"name": "envoyr",
+					"name": "weaveconfig",
 					"kind": "lib"
 				}
 			},
@@ -56,7 +56,7 @@
 			"request": "launch",
 			"name": "Debug executable 'cli'",
 			"cargo": {
-				"args": ["build", "--bin=cli", "--package=envoyr"],
+				"args": ["build", "--bin=cli", "--package=weaveconfig"],
 				"filter": {
 					"name": "cli",
 					"kind": "bin"
@@ -70,7 +70,7 @@
 			"request": "launch",
 			"name": "Debug unit tests in executable 'cli'",
 			"cargo": {
-				"args": ["test", "--no-run", "--bin=cli", "--package=envoyr"],
+				"args": ["test", "--no-run", "--bin=cli", "--package=weaveconfig"],
 				"filter": {
 					"name": "cli",
 					"kind": "bin"

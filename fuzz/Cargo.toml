@@ -1,5 +1,5 @@
 [package]
-name = "envoyr-fuzz"
+name = "weaveconfig-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
@@ -14,7 +14,7 @@ libfuzzer-sys = "0.4"
 jemallocator = "0.5.4"
 
 
-[dependencies.envoyr]
+[dependencies.weaveconfig]
 path = ".."
 
 [[bin]]

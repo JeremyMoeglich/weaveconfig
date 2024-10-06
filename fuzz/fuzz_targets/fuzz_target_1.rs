@@ -1,5 +1,5 @@
 #![no_main]
-use envoyr::serialize_env::{encode_env, parse_env, EnvValue};
+use weaveconfig::serialize_env::{encode_env, parse_env, EnvValue};
 use libfuzzer_sys::fuzz_target;
 
 #[cfg(target_os = "linux")]
@@ -29,6 +29,13 @@ fn env_value_eq(a: &EnvValue, b: &EnvValue) -> bool {
         (EnvValue::Bool(a), EnvValue::Bool(b)) => a == b,
         (EnvValue::Array(a), EnvValue::Array(b)) => {
             a.len() == b.len() && a.iter().zip(b.iter()).all(|(x, y)| env_value_eq(x, y))
+        }
+        (EnvValue::Null, EnvValue::Null) => true,
+        (EnvValue::Object(a), EnvValue::Object(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .zip(b.iter())
+                    .all(|((k1, v1), (k2, v2))| k1 == k2 && env_value_eq(v1, v2))
         }
         _ => false,
     }

@@ -1,72 +1,54 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, path::PathBuf};
-
-use crate::graph::{Dependency, Space};
+use std::collections::HashSet;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+/// The _space.jsonc file.
+/// A space describes a folder and its configuration.
+/// Each space can have multiple environments, each with their own values for the variables in the space.
 pub struct SpaceSchema {
-    dependencies: Option<Vec<DependencySchema>>,
-    mapping: Option<Vec<MappingSchema>>,
-    environments: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct MappingSchema {
-    from: String,
-    to: String,
+    /// The name of the space. This is used to identify the space in the graph.
+    /// Dependencies reference spaces by their name.
+    /// It must be unique within the graph.
+    pub name: String,
+    /// A list of dependencies that this space imports.
+    /// Each element must be a name of another space.
+    /// If not present, the space will not import any dependencies.
+    pub dependencies: Option<Vec<String>>,
+    /// A mapping between the environments from dependencies to the environments in this space.
+    /// If not present the environments from the dependencies will be used as is.
+    /// If this field is present, the environments field must be set.
+    pub mapping: Option<Vec<MappingSchema>>,
+    /// A list of environments that this space supports.
+    /// An environment describes a particular configuration of the space
+    /// for example, prod, dev, staging, etc.
+    /// If not present, the space will have a single unnamed environment with just the global variables.
+    pub environments: Option<HashSet<String>>,
+    /// weaveconfig can generate a /gen folder in the folder this space maps to.
+    /// This folder contains the config.json itself, as well as the typescript bindings to that config.
+    /// This is enabled by default, and can be disabled by setting this to false.
+    pub generate: Option<GenerateSchema>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
-enum DependencySchema {
-    Path(PathBuf),
-    DependencyObject(DependencyObjectSchema),
+pub enum GenerateSchema {
+    /// Toggle full generation on or off.
+    ShouldGenerate(bool),
+    /// Customize the generated files. This always includes the config.json, bindings can be toggled individually.
+    Generate(GenerateObjectSchema),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct DependencyObjectSchema {
-    path: PathBuf,
-    template: Option<String>,
-    keys: Option<Vec<String>>,
+pub struct GenerateObjectSchema {
+    /// Toggle the typescript bindings on or off.
+    pub typescript: bool,
 }
 
-impl SpaceSchema {
-    pub fn into_space(self) -> Result<Space, std::io::Error> {
-        Ok(Space {
-            dependencies: self
-                .dependencies
-                .unwrap_or_default()
-                .into_iter()
-                .map(|d| d.into_dependency())
-                .collect::<Result<Vec<Dependency>, std::io::Error>>()?,
-            mapping: self.mapping.map(|m| {
-                let mut map = BTreeMap::new();
-                for mapping in m {
-                    map.entry(mapping.from).or_insert(vec![]).push(mapping.to);
-                }
-                map
-            }),
-            environments: self.environments.into_iter().collect(),
-            variables: None,
-        })
-    }
-}
-
-impl DependencySchema {
-    fn into_dependency(self) -> Result<Dependency, std::io::Error> {
-        let (path, template, keys) = match self {
-            DependencySchema::Path(path) => (path, None, None),
-            DependencySchema::DependencyObject(dependency_object) => (
-                dependency_object.path,
-                dependency_object.template,
-                dependency_object.keys,
-            ),
-        };
-
-        Ok(Dependency {
-            path,
-            template,
-            keys,
-        })
-    }
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+/// A mapping between the environments from dependencies to the environments in this space.
+pub struct MappingSchema {
+    /// The name of the environment in the dependency.
+    pub from: String,
+    /// The name of the environment in this space.
+    pub to: String,
 }
