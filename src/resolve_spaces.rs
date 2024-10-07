@@ -57,7 +57,7 @@ fn resolve_space(
     let mut variables = space.variables.clone();
     for dependency in &space.dependencies {
         resolve_dependency(
-            name,
+            dependency,
             &space.mapping,
             &space.environments,
             &mut variables,
@@ -138,12 +138,7 @@ fn resolve_dependency(
                 }
 
                 if let Some(ref mut value) = to_merge {
-                    move_key(value, from_env, to_env).with_context(|| {
-                        format!(
-                            "Failed to move value from environment '{}' to '{}'",
-                            from_env, to_env
-                        )
-                    })?;
+                    move_key(value, from_env, to_env);
                 } else {
                     return Err(anyhow::anyhow!(
                         "No variables present to move from '{}' to '{}'",
@@ -171,14 +166,9 @@ fn resolve_dependency(
     Ok(())
 }
 
-fn move_key(value: &mut Map<String, Value>, from_key: &str, to_key: &str) -> Result<()> {
-    let current = value.remove(from_key).ok_or_else(|| {
-        anyhow::anyhow!(
-            "No value present for environment '{}'. Cannot move to '{}'.",
-            from_key,
-            to_key
-        )
-    })?;
-    value.insert(to_key.to_string(), current);
-    Ok(())
+fn move_key(value: &mut Map<String, Value>, from_key: &str, to_key: &str) {
+    let current = value.remove(from_key);
+    if let Some(current) = current {
+        value.insert(to_key.to_string(), current);
+    }
 }

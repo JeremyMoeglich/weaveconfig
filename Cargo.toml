@@ -28,3 +28,8 @@ jemallocator = { version = "0.5.4" }
 [profile.release]
 opt-level = 3
 lto = "fat"
+
+
+[profile.dev]
+opt-level = 0
+debug = true
