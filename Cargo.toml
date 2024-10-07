@@ -27,9 +27,4 @@ jemallocator = { version = "0.5.4" }
 
 [profile.release]
 opt-level = 3
-lto = "thin"
-debug = true
-
-[profile.release.package.weaveconfig]
-opt-level = 1
-debug = true
+lto = "fat"
