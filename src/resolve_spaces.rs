@@ -1,4 +1,8 @@
-use crate::{merging::merge_map_consume, space_graph::SpaceGraph};
+use crate::{
+    file_graph::FileToCopy,
+    merging::merge_map_consume,
+    space_graph::{GenerateSpace, SpaceGraph},
+};
 use anyhow::{Context, Result};
 use serde_json::{Map, Value};
 use std::{
@@ -11,7 +15,8 @@ pub struct ResolvedSpace {
     pub variables: Option<Map<String, Value>>,
     pub environments: HashSet<String>,
     pub path: PathBuf,
-    pub files_to_copy: Vec<PathBuf>,
+    pub files_to_copy: Vec<FileToCopy>,
+    pub generate: GenerateSpace,
 }
 
 pub fn resolve_spaces(space_graph: SpaceGraph) -> Result<HashMap<String, ResolvedSpace>> {
@@ -91,7 +96,11 @@ fn resolve_space(
         for env in &space.environments {
             variables
                 .entry(env.clone())
-                .or_insert(Value::Object(Map::new()));
+                .or_insert_with(|| Value::Object(Map::new()));
+            if let Some(Value::Object(obj)) = variables.get_mut(env) {
+                obj.entry("env".to_string())
+                    .or_insert(Value::String(env.clone()));
+            }
         }
     }
 
@@ -102,6 +111,7 @@ fn resolve_space(
             environments: space.environments.clone(),
             path: space.path.clone(),
             files_to_copy: space.files_to_copy.clone(),
+            generate: space.generate.clone(),
         },
     );
 
@@ -138,7 +148,7 @@ fn resolve_dependency(
                 }
 
                 if let Some(ref mut value) = to_merge {
-                    move_key(value, from_env, to_env);
+                    copy_key(value, from_env, to_env);
                 } else {
                     return Err(anyhow::anyhow!(
                         "No variables present to move from '{}' to '{}'",
@@ -150,7 +160,7 @@ fn resolve_dependency(
         }
     }
 
-    if let Some(to_merge) = to_merge {
+    if let Some(mut to_merge) = to_merge {
         if let Some(ref mut value) = variables {
             merge_map_consume(value, to_merge).with_context(|| {
                 format!(
@@ -166,9 +176,9 @@ fn resolve_dependency(
     Ok(())
 }
 
-fn move_key(value: &mut Map<String, Value>, from_key: &str, to_key: &str) {
-    let current = value.remove(from_key);
-    if let Some(current) = current {
-        value.insert(to_key.to_string(), current);
+fn copy_key(value: &mut Map<String, Value>, from_key: &str, to_key: &str) {
+    if let Some(current) = value.get(from_key) {
+        let copied = current.clone();
+        value.insert(to_key.to_string(), copied);
     }
 }

@@ -11,13 +11,20 @@ pub struct Directory {
     pub path: PathBuf,
     pub parent_directory: Option<PathBuf>,
     pub space: Option<SpaceNode>,
-    pub rest_to_copy: Vec<PathBuf>,
+    pub rest_to_copy: Vec<FileToCopy>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpaceNode {
     pub schema: SpaceSchema,
     pub variables: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileToCopy {
+    pub path: PathBuf,
+    pub dest_filename: String,
+    pub for_each_env: bool,
 }
 
 /// Creates a graph of the weaveconfig configuration.
@@ -136,7 +143,7 @@ async fn locate_directories(directory: &mut Directory) -> Result<(), anyhow::Err
 enum FileType {
     Space(SpaceSchema),
     Variables(serde_json::Map<String, serde_json::Value>),
-    Rest(PathBuf),
+    Rest(FileToCopy),
 }
 
 async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
@@ -188,13 +195,25 @@ async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
                 map.insert(prefix, serde_json::Value::Object(variables));
                 Ok(FileType::Variables(map))
             }
+            segments if segments.first() == Some(&"_forenv") => {
+                let dest_filename = segments[1..].join(".");
+                Ok(FileType::Rest(FileToCopy {
+                    path: file_path,
+                    dest_filename,
+                    for_each_env: true,
+                }))
+            }
             _ => Err(anyhow!(
-                "Invalid file name format: '{}'. Expected '_space.json', '_env.json', or '_<prefix>_env.json'.",
+                "Invalid file name format: '{}'. Expected '_space.json', '_env.json', '_<prefix>_env.json' or '_forenv.<rest>'.",
                 file_name
             )),
         }
     } else {
-        Ok(FileType::Rest(file_path))
+        Ok(FileType::Rest(FileToCopy {
+            path: file_path.clone(),
+            dest_filename: file_name.to_string(),
+            for_each_env: false,
+        }))
     }
 }
 

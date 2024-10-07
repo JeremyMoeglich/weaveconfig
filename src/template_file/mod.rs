@@ -27,7 +27,7 @@ pub enum VariableError {
     InvalidType(String, String),
 }
 
-fn value_type(value: &Value) -> String {
+pub fn value_type(value: &Value) -> String {
     match value {
         Value::String(_) => "string",
         Value::Number(_) => "number",

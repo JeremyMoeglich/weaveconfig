@@ -47,10 +47,10 @@ pub fn parse_segment(input: &str) -> Result<(String, &str), ParseSegmentError> {
 
             // If we reach here, the quoted string was not closed
             Err(ParseSegmentError::UnclosedQuote)
-        } else if first_char.is_alphanumeric() || first_char == '_' {
-            // It's an alphanumeric or underscore segment
+        } else if first_char.is_alphanumeric() || first_char == '_' || first_char == '-' {
+            // It's an alphanumeric, underscore, or hyphen segment
             for (idx, c) in chars {
-                if c.is_alphanumeric() || c == '_' {
+                if c.is_alphanumeric() || c == '_' || c == '-' {
                     result.push(c);
                 } else {
                     // Found a non-alphanumeric character, return up to this point
@@ -61,7 +61,7 @@ pub fn parse_segment(input: &str) -> Result<(String, &str), ParseSegmentError> {
             // Reached the end of the input
             Ok((result, ""))
         } else {
-            // The segment does not start with a quote or an alphanumeric character
+            // The segment does not start with a quote, alphanumeric, underscore, or hyphen
             // Return an error as zero characters are parsed
             Err(ParseSegmentError::NoSegment)
         }
@@ -88,10 +88,10 @@ mod tests {
     }
 
     #[test]
-    fn test_alphanumeric_with_underscores() {
-        let input = "hello_world_123!@#";
+    fn test_alphanumeric_with_underscores_and_hyphens() {
+        let input = "hello_world-123!@#";
         let (segment, remaining) = parse_segment(input).unwrap();
-        assert_eq!(segment, "hello_world_123");
+        assert_eq!(segment, "hello_world-123");
         assert_eq!(remaining, "!@#");
     }
 
@@ -143,16 +143,16 @@ mod tests {
 
     #[test]
     fn test_mixed_input() {
-        let input = "start \"quoted \\\"string\\\"\" middle 'another \\'test\\'' end";
+        let input = "start-1 \"quoted \\\"string\\\"\" middle-2 'another \\'test\\'' end-3";
 
         // Parse first segment
         let (segment, remaining) = parse_segment(input).unwrap();
-        assert_eq!(segment, "start");
+        assert_eq!(segment, "start-1");
         // Skip leading whitespace before parsing next segment
         let remaining = skip_whitespace(remaining);
         assert_eq!(
             remaining,
-            "\"quoted \\\"string\\\"\" middle 'another \\'test\\'' end"
+            "\"quoted \\\"string\\\"\" middle-2 'another \\'test\\'' end-3"
         );
 
         // Parse second segment
@@ -160,42 +160,46 @@ mod tests {
         assert_eq!(segment, "quoted \"string\"");
         // Skip leading whitespace before parsing next segment
         let remaining = skip_whitespace(remaining);
-        assert_eq!(remaining, "middle 'another \\'test\\'' end");
+        assert_eq!(remaining, "middle-2 'another \\'test\\'' end-3");
 
         // Parse third segment
         let (segment, remaining) = parse_segment(remaining).unwrap();
-        assert_eq!(segment, "middle");
+        assert_eq!(segment, "middle-2");
         // Skip leading whitespace before parsing next segment
         let remaining = skip_whitespace(remaining);
-        assert_eq!(remaining, "'another \\'test\\'' end");
+        assert_eq!(remaining, "'another \\'test\\'' end-3");
 
         // Parse fourth segment
         let (segment, remaining) = parse_segment(remaining).unwrap();
         assert_eq!(segment, "another 'test'");
         // Skip leading whitespace before parsing next segment
         let remaining = skip_whitespace(remaining);
-        assert_eq!(remaining, "end");
+        assert_eq!(remaining, "end-3");
 
         // Parse fifth segment
         let (segment, remaining) = parse_segment(remaining).unwrap();
-        assert_eq!(segment, "end");
+        assert_eq!(segment, "end-3");
         assert_eq!(remaining, "");
     }
 
     #[test]
     fn test_zero_characters_parsed_error() {
-        let inputs = vec![" ", "!", "@#", "_invalid_start"];
+        let inputs = vec![" ", "!", "@#"];
 
         for input in inputs {
-            if input.starts_with('_') {
-                // If the segment starts with an underscore, it should be parsed as a valid segment
-                let (segment, remaining) = parse_segment(input).unwrap();
-                assert_eq!(segment, "_invalid_start");
-                assert_eq!(remaining, "");
-            } else {
-                let result = parse_segment(input);
-                assert_eq!(result, Err(ParseSegmentError::NoSegment));
-            }
+            let result = parse_segment(input);
+            assert_eq!(result, Err(ParseSegmentError::NoSegment));
+        }
+    }
+
+    #[test]
+    fn test_valid_segment_starts() {
+        let inputs = vec!["_valid_start", "-valid-start", "valid-middle-1"];
+
+        for input in inputs {
+            let (segment, remaining) = parse_segment(input).unwrap();
+            assert_eq!(segment, input);
+            assert_eq!(remaining, "");
         }
     }
 }

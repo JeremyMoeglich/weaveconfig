@@ -19,11 +19,13 @@ pub async fn generate_binding(
         let ts_type = json_value_to_ts_type(&Value::Object(variables.clone()));
         content.push_str(&format!("type ConfigType = {};\n\n", ts_type));
 
-        content.push_str("const environments = ");
+        content.push_str("export const environments = ");
         content.push_str(&format!(
             "{} as const;",
             serde_json::to_string(&resolved_space.environments)?
         ));
+        content.push_str("\n");
+        content.push_str("export type Environments = typeof environments[number];");
 
         content.push_str("\n\n// static code starts here, using variant: ");
         if resolved_space.environments.len() == 0 {

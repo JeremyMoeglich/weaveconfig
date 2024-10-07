@@ -1,6 +1,9 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::file_graph::Directory;
+use crate::{
+    file_graph::{Directory, FileToCopy},
+    schemas::GenerateSchema,
+};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -11,8 +14,15 @@ pub struct Space {
     pub mapping: Option<HashMap<String, Vec<String>>>,
     pub environments: HashSet<String>,
     pub variables: Option<serde_json::Map<String, serde_json::Value>>,
-    pub files_to_copy: Vec<PathBuf>,
+    pub files_to_copy: Vec<FileToCopy>,
     pub parent_space: Option<String>,
+    pub generate: GenerateSpace,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenerateSpace {
+    pub generate: bool,
+    pub typescript: bool,
 }
 
 pub type SpaceGraph = HashMap<String, Space>;
@@ -53,6 +63,22 @@ fn add_to_spaces_graph(
             variables: space.variables,
             files_to_copy: vec![],
             parent_space: closest_parent_space,
+            generate: {
+                match space.schema.generate {
+                    Some(GenerateSchema::Generate(generate)) => GenerateSpace {
+                        generate: true,
+                        typescript: generate.typescript,
+                    },
+                    Some(GenerateSchema::ShouldGenerate(generate)) => GenerateSpace {
+                        generate,
+                        typescript: true,
+                    },
+                    None => GenerateSpace {
+                        generate: true,
+                        typescript: true,
+                    },
+                }
+            },
         };
         resolve_files_to_copy(&dir, &mut space.files_to_copy);
         space_graph.insert(space.name.clone(), space);
@@ -63,7 +89,7 @@ fn add_to_spaces_graph(
     }
 }
 
-fn resolve_files_to_copy(dir: &Directory, files: &mut Vec<PathBuf>) {
+fn resolve_files_to_copy(dir: &Directory, files: &mut Vec<FileToCopy>) {
     for file in &dir.rest_to_copy {
         files.push(file.clone());
     }
