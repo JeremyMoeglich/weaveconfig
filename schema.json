@@ -4,6 +4,10 @@
   "description": "Schema for validating the _space.jsonc configuration file in weaveconfig.",
   "type": "object",
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "The URI of the JSON Schema that this document adheres to."
+    },
     "name": {
       "type": "string",
       "description": "The name of the space. This is used to identify the space in the graph. Dependencies reference spaces by their name. It must be unique within the graph."

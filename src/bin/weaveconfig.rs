@@ -11,7 +11,7 @@ use weaveconfig::generate_weaveconfig;
 #[derive(Parser)]
 #[command(
     name = "weaveconfig-cli",
-    version = "0.1.0",
+    version = "0.1.2",
     author = "Jeremy Moeglich <jeremy@moeglich.dev>",
     about = "A CLI to manage weaveconfig configurations"
 )]

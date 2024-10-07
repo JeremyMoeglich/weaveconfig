@@ -39,7 +39,15 @@ fn json_value_to_ts_type_helper(value: &serde_json::Value, indent: usize) -> Str
             let inner_indent_str = "    ".repeat(indent + 1);
 
             if map.is_empty() {
-                "Record<string, never>".to_string()
+                "Record<string, undefined>".to_string()
+                // using never is unsound, undefined is more accurate
+                // const a: Record<string, never> = {};
+                // const b: { test: string } = { test: "test" };
+                // const some_bool: boolean = false;
+
+                // const c = some_bool ? a : b;
+
+                // c.test // infered as string, should be string | undefined
             } else {
                 let mut fields: Vec<String> = vec![];
                 for (key, val) in map {
