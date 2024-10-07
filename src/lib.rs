@@ -16,6 +16,7 @@ mod space_graph;
 mod ts_binding;
 mod write_json_file;
 mod template_file;
+mod parse_jsonc;
 
 pub async fn generate_weaveconfig(weaveconfig_config_root: &Path) -> Result<()> {
     let directory = traverse_directory(weaveconfig_config_root).await?;

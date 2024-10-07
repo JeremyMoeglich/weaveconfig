@@ -5,15 +5,11 @@ use std::{
 
 use anyhow::Context;
 use futures::{stream::FuturesUnordered, StreamExt};
-use lazy_static::lazy_static;
-use serde_json::{Map, Value};
+use serde_json::Map;
 
 use crate::{
-    map_path::map_path,
-    resolve_spaces::ResolvedSpace,
-    template_file::{self, template_file},
-    ts_binding::generate_binding::generate_binding,
-    write_json_file::write_json_file,
+    map_path::map_path, resolve_spaces::ResolvedSpace, template_file::template_file,
+    ts_binding::generate_binding::generate_binding, write_json_file::write_json_file,
 };
 
 async fn gen_folder(real_path: &PathBuf) -> Result<PathBuf, anyhow::Error> {

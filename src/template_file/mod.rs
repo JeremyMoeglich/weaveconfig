@@ -64,7 +64,9 @@ fn render_variable(
             }
             Modifier::Key(key) => {
                 value = match value {
-                    Value::Object(object) => object.get(key).unwrap_or(&Value::Null),
+                    Value::Object(object) => object
+                        .get(key)
+                        .ok_or(VariableError::KeyNotFound(key.clone()))?,
                     _ => {
                         return Err(VariableError::InvalidType(
                             "object".to_string(),
@@ -311,7 +313,7 @@ fn parse_modifier(input: &str) -> Result<(Modifier, &str), TemplateError> {
                 Err(TemplateError::SyntaxError("Unexpected EOF".to_string()))
             }
         }
-        Some((char, input)) => Err(TemplateError::SyntaxError(format!(
+        Some((char, _)) => Err(TemplateError::SyntaxError(format!(
             "Unexpected character: {}",
             char
         ))),

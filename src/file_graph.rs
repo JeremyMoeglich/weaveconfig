@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context};
 use futures::{stream::FuturesOrdered, StreamExt};
 
-use crate::{merging::merge_map_consume, schemas::SpaceSchema};
+use crate::{merging::merge_map_consume, parse_jsonc::parse_jsonc, schemas::SpaceSchema};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Directory {
@@ -153,7 +153,7 @@ async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
                 let content = read_file_to_string(&file_path)
                     .await
                     .with_context(|| format!("Failed to read space configuration file: {:?}", file_path))?;
-                let space_schema: SpaceSchema = serde_hjson::from_str(&content).with_context(|| {
+                let space_schema: SpaceSchema = parse_jsonc(&content).with_context(|| {
                     format!(
                         "Failed to parse JSON in space configuration file: {:?}",
                         file_path
@@ -166,7 +166,7 @@ async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
                 let content = read_file_to_string(&file_path)
                     .await
                     .with_context(|| format!("Failed to read variables file: {:?}", file_path))?;
-                let map: serde_json::Map<String, serde_json::Value> = serde_hjson::from_str(&content)
+                let map: serde_json::Map<String, serde_json::Value> = parse_jsonc(&content)
                     .with_context(|| format!("Failed to parse JSON variables in file: {:?}", file_path))?;
                 Ok(FileType::Variables(map))
             }
@@ -176,7 +176,7 @@ async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
                     .await
                     .with_context(|| format!("Failed to read prefixed variables file: {:?}", file_path))?;
                 let variables: serde_json::Map<String, serde_json::Value> =
-                    serde_hjson::from_str(&content).with_context(|| {
+                    parse_jsonc(&content).with_context(|| {
                         format!(
                             "Failed to parse JSON variables in prefixed file: {:?}",
                             file_path
