@@ -13,7 +13,7 @@ biome_formatter = "0.5.7"
 biome_js_formatter = "0.5.7"
 biome_js_parser = "0.5.7"
 biome_js_syntax = "0.5.7"
-clap = { version = "4.5.18", features = ["cargo"] }
+clap = { version = "4.5.18", features = ["cargo", "derive"] }
 fjson = "0.3.1"
 futures = "0.3.30"
 regex = "1.11.0"
