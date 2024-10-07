@@ -16,12 +16,8 @@ use weaveconfig::generate_weaveconfig;
     about = "A CLI to manage weaveconfig configurations"
 )]
 struct Cli {
-    /// Path to the directory to generate the configuration for
-    #[arg(short, long, default_value = ".")]
-    path: String,
-
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
 #[derive(Subcommand)]
@@ -38,16 +34,22 @@ enum Commands {
         #[arg(default_value = ".")]
         path: String,
     },
+    /// Generates the weaveconfig configuration
+    Gen {
+        /// Path to the directory to generate the configuration for
+        #[arg(default_value = ".")]
+        path: String,
+    },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let cli = Cli::parse();
 
-    match &cli.command {
-        Some(Commands::Init { dir }) => {
+    match cli.command {
+        Commands::Init { dir } => {
             // Handle `init` command
-            let init_path = Path::new(dir);
+            let init_path = Path::new(&dir);
             let init_path = init_path
                 .canonicalize()
                 .with_context(|| format!("The path {:?} does not exist", init_path))?;
@@ -55,14 +57,9 @@ async fn main() -> Result<(), anyhow::Error> {
             println!("Initializing weaveconfig in directory: {:?}", init_path);
             tokio::fs::create_dir(init_path.join("weaveconfig")).await?;
         }
-        Some(Commands::Generate { path }) => {
+        Commands::Generate { path } | Commands::Gen { path } => {
             // Handle `generate` command
-            let path = Path::new(path);
-            generate_config(path).await?;
-        }
-        None => {
-            // Handle the default behavior (same as `generate`)
-            let path = Path::new(&cli.path);
+            let path = Path::new(&path);
             generate_config(path).await?;
         }
     }
