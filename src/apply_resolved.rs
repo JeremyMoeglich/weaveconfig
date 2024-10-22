@@ -1,15 +1,20 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
 };
 
 use anyhow::Context;
 use futures::{stream::FuturesUnordered, StreamExt};
+use serde_json::{Map, Value};
 
 use crate::{
-    get_environment_value::get_environment_value, map_path::map_path,
-    resolve_spaces::ResolvedSpace, template_file::template_file,
-    ts_binding::generate_binding::generate_binding, write_json_file::write_json_file,
+    get_environment_value::get_environment_value,
+    map_path::map_path,
+    resolve_spaces::ResolvedSpace,
+    space_graph::{CopyTree, ToCopy},
+    template_file::template_file,
+    ts_binding::generate_binding::generate_binding,
+    write_json_file::write_json_file,
 };
 
 async fn gen_folder(real_path: &PathBuf) -> Result<PathBuf, anyhow::Error> {
@@ -62,65 +67,164 @@ async fn write_gitignore(gen_folder: &PathBuf) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+// Function to write files and directories to be copied
 async fn write_to_copy(space: &ResolvedSpace, real_path: &Path) -> Result<(), anyhow::Error> {
-    // Prepare variables once to avoid cloning multiple times
-    let variables = space.variables.clone().unwrap_or_default();
+    // Copy the tree structure with files and directories
+    copy_tree(
+        &space.files_to_copy,
+        real_path,
+        None,
+        &space.variables,
+        &space.environments,
+    )
+    .await
+    .with_context(|| format!("Failed to copy tree structure for: {}", real_path.display()))?;
 
-    for to_copy in &space.files_to_copy {
-        // Determine the relative destination path
-        let dest_relative = to_copy
-            .path
-            .strip_prefix(&space.path)
-            .with_context(|| format!("Failed to strip prefix for {}", to_copy.path.display()))?;
+    Ok(())
+}
 
-        // Read the file content asynchronously
-        let content = tokio::fs::read_to_string(&to_copy.path)
-            .await
-            .with_context(|| format!("Failed to read file: {}", to_copy.path.display()))?;
-
-        // Compute the full destination path
-        let mapped_dist = real_path.join(dest_relative);
-
-        // Create parent directories if they don't exist
-        if let Some(parent) = mapped_dist.parent() {
-            tokio::fs::create_dir_all(parent)
-                .await
-                .with_context(|| format!("Failed to create directories: {}", parent.display()))?;
-        }
-
-        if to_copy.for_each_env {
-            // Iterate over each environment and write templated files
-            for env in &space.environments {
-                let env_variables = get_environment_value(&variables, env)
-                    .with_context(|| format!("Failed to get variables for environment: {}", env))?;
-
-                let templated_content =
-                    template_file(&content, &env_variables).with_context(|| {
-                        format!(
-                            "Failed to template file for environment {}: {}",
-                            env,
-                            to_copy.path.display()
+// Recursive function to copy a tree of files and directories
+async fn copy_tree(
+    copytree: &CopyTree,
+    copy_into: &Path,
+    env: Option<&str>,
+    variables: &Option<Map<String, Value>>,
+    environments: &HashSet<String>,
+) -> Result<(), anyhow::Error> {
+    for to_copy in &copytree.to_copy {
+        let prefix = "_forenv";
+        // Check if the file/directory name needs environment-specific substitution
+        if needs_substitution(
+            &to_copy
+                .last_segment()
+                .with_context(|| format!("Failed to get last segment for {:?}", to_copy))?,
+            prefix,
+        ) {
+            match env {
+                // If environment is specified, copy with that environment
+                Some(env) => {
+                    copy_tocopy_with_env(to_copy, copy_into, Some(env), variables, environments)
+                        .await
+                        .with_context(|| {
+                            format!("Failed to copy {:?} with environment: {}", to_copy, env)
+                        })?;
+                }
+                // If no environment is specified, copy for all environments
+                None => {
+                    for env in environments {
+                        // Get environment-specific variables
+                        let variables = match variables {
+                            Some(variables) => {
+                                Some(get_environment_value(variables, env).with_context(|| {
+                                    format!(
+                                        "Failed to get environment value for '{}' in {:?}",
+                                        env, variables
+                                    )
+                                })?)
+                            }
+                            None => None,
+                        };
+                        copy_tocopy_with_env(
+                            to_copy,
+                            copy_into,
+                            Some(env),
+                            &variables,
+                            environments,
                         )
-                    })?;
-
-                let dest = mapped_dist.with_file_name(format!("{}.{}", env, to_copy.dest_filename));
-
-                tokio::fs::write(&dest, templated_content)
-                    .await
-                    .with_context(|| format!("Failed to write file: {}", dest.display()))?;
+                        .await
+                        .with_context(|| {
+                            format!("Failed to copy {:?} for environment: {}", to_copy, env)
+                        })?;
+                    }
+                }
             }
         } else {
-            // Template the content once and write to the destination
-            let templated_content = template_file(&content, &variables)
-                .with_context(|| format!("Failed to template file: {}", to_copy.path.display()))?;
-
-            let dest = mapped_dist.with_file_name(&to_copy.dest_filename);
-
-            tokio::fs::write(&dest, templated_content)
+            // If no environment substitution is needed, copy without environment
+            copy_tocopy_with_env(to_copy, copy_into, None, variables, environments)
                 .await
-                .with_context(|| format!("Failed to write file: {}", dest.display()))?;
+                .with_context(|| {
+                    format!(
+                        "Failed to copy {:?} without environment substitution",
+                        to_copy
+                    )
+                })?;
         }
     }
 
     Ok(())
+}
+
+// Function to copy a single file or directory with environment-specific handling
+async fn copy_tocopy_with_env(
+    to_copy: &ToCopy,
+    copy_into: &Path,
+    env: Option<&str>,
+    variables: &Option<Map<String, Value>>,
+    environments: &HashSet<String>,
+) -> Result<(), anyhow::Error> {
+    let last_segment = to_copy
+        .last_segment()
+        .with_context(|| "Failed to get last segment")?;
+    // Substitute environment in the file/directory name if needed
+    let substituted_name = match env {
+        Some(env) => substitute_path_segment(last_segment, "_forenv", env),
+        None => last_segment.to_string(),
+    };
+    let destination = copy_into.join(substituted_name);
+
+    match to_copy {
+        ToCopy::File(file) => {
+            // Read file content
+            let content = tokio::fs::read_to_string(&file)
+                .await
+                .with_context(|| format!("Failed to read file: {:?}", file))?;
+            // Apply variable substitution if variables are provided
+            let content = if let Some(variables) = variables {
+                template_file(&content, variables)
+                    .with_context(|| "Failed to apply variable substitution")?
+            } else {
+                content
+            };
+            // Write the processed content to the destination
+            tokio::fs::write(&destination, content)
+                .await
+                .with_context(|| format!("Failed to write to destination: {:?}", destination))?;
+        }
+        ToCopy::Directory { subtree, .. } => {
+            // Create the directory if it doesn't exist
+            if !destination.exists() {
+                tokio::fs::create_dir(&destination)
+                    .await
+                    .with_context(|| format!("Failed to create directory: {:?}", destination))?;
+            }
+            // Recursively copy the subdirectory
+            Box::pin(copy_tree(
+                subtree,
+                &destination,
+                env,
+                variables,
+                environments,
+            ))
+            .await
+            .with_context(|| {
+                format!("Failed to recursively copy subdirectory: {:?}", destination)
+            })?;
+        }
+    }
+
+    Ok(())
+}
+
+// Function to substitute environment in a path segment
+fn substitute_path_segment(segment: &str, from: &str, to: &str) -> String {
+    if needs_substitution(segment, from) {
+        segment.replacen(from, to, 1)
+    } else {
+        segment.to_string()
+    }
+}
+
+// Function to check if a segment needs environment substitution
+fn needs_substitution(segment: &str, from: &str) -> bool {
+    segment.starts_with(from)
 }

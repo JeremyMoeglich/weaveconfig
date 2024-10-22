@@ -11,7 +11,7 @@ pub struct Directory {
     pub path: PathBuf,
     pub parent_directory: Option<PathBuf>,
     pub space: Option<SpaceNode>,
-    pub rest_to_copy: Vec<FileToCopy>,
+    pub rest_to_copy: Vec<PathBuf>
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -20,12 +20,7 @@ pub struct SpaceNode {
     pub variables: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct FileToCopy {
-    pub path: PathBuf,
-    pub dest_filename: String,
-    pub for_each_env: bool,
-}
+const FORENV_PREFIX: &str = "_forenv";
 
 /// Creates a graph of the weaveconfig configuration.
 /// The root of the graph is typically the `weaveconfig` directory within the project root.
@@ -41,7 +36,7 @@ pub async fn traverse_directory(
         path,
         parent_directory: None,
         space: None,
-        rest_to_copy: Vec::new(),
+        rest_to_copy: Vec::new()
     };
 
     locate_directories(&mut root_directory).await?;
@@ -76,7 +71,7 @@ async fn locate_directories(directory: &mut Directory) -> Result<(), anyhow::Err
                     path: entry_path.clone(),
                     parent_directory: Some(parent_path.clone()),
                     space: None,
-                    rest_to_copy: Vec::new(),
+                    rest_to_copy: Vec::new()
                 };
 
                 if let Err(e) = locate_directories(&mut sub_directory).await {
@@ -143,7 +138,7 @@ async fn locate_directories(directory: &mut Directory) -> Result<(), anyhow::Err
 enum FileType {
     Space(SpaceSchema),
     Variables(serde_json::Map<String, serde_json::Value>),
-    Rest(FileToCopy),
+    Rest(PathBuf),
 }
 
 async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
@@ -195,13 +190,8 @@ async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
                 map.insert(prefix, serde_json::Value::Object(variables));
                 Ok(FileType::Variables(map))
             }
-            segments if segments.first() == Some(&"_forenv") => {
-                let dest_filename = segments[1..].join(".");
-                Ok(FileType::Rest(FileToCopy {
-                    path: file_path,
-                    dest_filename,
-                    for_each_env: true,
-                }))
+            segments if segments.first() == Some(&FORENV_PREFIX) => {
+                Ok(FileType::Rest(file_path))
             }
             _ => Err(anyhow!(
                 "Invalid file name format: '{}'. Expected '_space.json', '_env.json', '_<prefix>_env.json' or '_forenv.<rest>'.",
@@ -209,11 +199,7 @@ async fn process_file(file_path: PathBuf) -> Result<FileType, anyhow::Error> {
             )),
         }
     } else {
-        Ok(FileType::Rest(FileToCopy {
-            path: file_path.clone(),
-            dest_filename: file_name.to_string(),
-            for_each_env: false,
-        }))
+        Ok(FileType::Rest(file_path))
     }
 }
 

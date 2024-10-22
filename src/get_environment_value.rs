@@ -2,6 +2,8 @@ use serde_json::{Map, Value};
 
 use crate::template_file::value_type;
 
+/// Get the environment variables for a given environment
+/// This involves merging the key of the environment into the root overwriting any existing keys
 pub fn get_environment_value(
     variables: &Map<String, Value>,
     environment: &str,

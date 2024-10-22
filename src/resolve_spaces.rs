@@ -1,7 +1,6 @@
 use crate::{
-    file_graph::FileToCopy,
     merging::merge_map_consume,
-    space_graph::{GenerateSpace, SpaceGraph},
+    space_graph::{CopyTree, GenerateSpace, SpaceGraph},
 };
 use anyhow::{Context, Result};
 use serde_json::{Map, Value};
@@ -15,7 +14,7 @@ pub struct ResolvedSpace {
     pub variables: Option<Map<String, Value>>,
     pub environments: HashSet<String>,
     pub path: PathBuf,
-    pub files_to_copy: Vec<FileToCopy>,
+    pub files_to_copy: CopyTree,
     pub generate: GenerateSpace,
 }
 

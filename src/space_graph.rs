@@ -1,9 +1,8 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{
-    file_graph::{Directory, FileToCopy},
-    schemas::GenerateSchema,
-};
+use anyhow::Context;
+
+use crate::{file_graph::Directory, schemas::GenerateSchema};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -14,9 +13,34 @@ pub struct Space {
     pub mapping: Option<HashMap<String, Vec<String>>>,
     pub environments: HashSet<String>,
     pub variables: Option<serde_json::Map<String, serde_json::Value>>,
-    pub files_to_copy: Vec<FileToCopy>,
+    pub files_to_copy: CopyTree,
     pub parent_space: Option<String>,
     pub generate: GenerateSpace,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CopyTree {
+    pub to_copy: Vec<ToCopy>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ToCopy {
+    File(PathBuf),
+    Directory { path: PathBuf, subtree: CopyTree },
+}
+
+impl ToCopy {
+    pub fn last_segment(&self) -> Result<&str, anyhow::Error> {
+        let path = match self {
+            ToCopy::File(path) => path,
+            ToCopy::Directory { path, .. } => path,
+        };
+        let file_name = path.file_name().context("File has no name")?;
+        let file_name = file_name
+            .to_str()
+            .context("File name is not valid unicode")?;
+        Ok(file_name)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,9 +70,7 @@ fn add_to_spaces_graph(
         .map(|s| s.schema.name.to_string())
         .or_else(|| closest_parent_space.clone());
     if let Some(space) = dir.space.take() {
-        let mut files_to_copy = vec![];
-        resolve_files_to_copy(&dir, &mut files_to_copy);
-        let mut space = Space {
+        let space = Space {
             name: space.schema.name,
             path: dir.path.clone(),
             dependencies: space.schema.dependencies.unwrap_or_default(),
@@ -61,7 +83,7 @@ fn add_to_spaces_graph(
             }),
             environments: space.schema.environments.unwrap_or_default(),
             variables: space.variables,
-            files_to_copy: vec![],
+            files_to_copy: resolve_files_to_copy(&dir),
             parent_space: closest_parent_space,
             generate: {
                 match space.schema.generate {
@@ -80,7 +102,6 @@ fn add_to_spaces_graph(
                 }
             },
         };
-        resolve_files_to_copy(&dir, &mut space.files_to_copy);
         space_graph.insert(space.name.clone(), space);
     }
 
@@ -89,14 +110,20 @@ fn add_to_spaces_graph(
     }
 }
 
-fn resolve_files_to_copy(dir: &Directory, files: &mut Vec<FileToCopy>) {
+fn resolve_files_to_copy(dir: &Directory) -> CopyTree {
+    let mut files = vec![];
     for file in &dir.rest_to_copy {
-        files.push(file.clone());
+        files.push(ToCopy::File(file.clone()));
     }
 
     for entry in &dir.directories {
         if entry.space.is_none() {
-            resolve_files_to_copy(&entry, files)
+            files.push(ToCopy::Directory {
+                path: entry.path.clone(),
+                subtree: resolve_files_to_copy(entry),
+            });
         }
     }
+
+    CopyTree { to_copy: files }
 }
