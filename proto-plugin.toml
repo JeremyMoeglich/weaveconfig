@@ -2,7 +2,7 @@ name = "weaveconfig"
 type = "cli"
 
 [resolve]
-git-url = "https://github.com/JeremyMoeglich/Weaveconfig"
+git-url = "https://github.com/JeremyMoeglich/weaveconfig"
 
 [platform.linux]
 download-file = "weaveconfig-{arch}-unknown-linux-{libc}"
@@ -14,4 +14,4 @@ download-file = "weaveconfig-{arch}-apple-darwin"
 download-file = "weaveconfig-{arch}-pc-windows-msvc.exe"
 
 [install]
-download-url = "https://github.com/JeremyMoeglich/Weaveconfig/releases/download/{version}/{download_file}"
+download-url = "https://github.com/JeremyMoeglich/weaveconfig/releases/download/{version}/{download_file}"
