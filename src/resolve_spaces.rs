@@ -159,7 +159,7 @@ fn resolve_dependency(
         }
     }
 
-    if let Some(mut to_merge) = to_merge {
+    if let Some(to_merge) = to_merge {
         if let Some(ref mut value) = variables {
             merge_map_consume(value, to_merge).with_context(|| {
                 format!(
