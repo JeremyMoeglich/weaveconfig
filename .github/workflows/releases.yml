@@ -67,10 +67,21 @@ jobs:
           fi
         shell: bash
 
+      - name: Copy files with correct name
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            mkdir -p release
+            copy "target\\${{ matrix.target }}\\release\\weaveconfig${{ matrix.extension }}" "release\\weaveconfig-${{ matrix.target }}${{ matrix.extension }}"
+          else
+            mkdir -p release
+            cp "target/${{ matrix.target }}/release/weaveconfig${{ matrix.extension }}" "release/weaveconfig-${{ matrix.target }}${{ matrix.extension }}"
+          fi
+
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/${{ matrix.target }}/release/weaveconfig${{ matrix.extension }}
+            release/weaveconfig-${{ matrix.target }}${{ matrix.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
