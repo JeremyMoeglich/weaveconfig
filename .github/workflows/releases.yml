@@ -70,13 +70,8 @@ jobs:
       - name: Copy files with correct name
         shell: bash
         run: |
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            mkdir -p release
-            copy "target\\${{ matrix.target }}\\release\\weaveconfig${{ matrix.extension }}" "release\\weaveconfig-${{ matrix.target }}${{ matrix.extension }}"
-          else
-            mkdir -p release
-            cp "target/${{ matrix.target }}/release/weaveconfig${{ matrix.extension }}" "release/weaveconfig-${{ matrix.target }}${{ matrix.extension }}"
-          fi
+          mkdir -p release
+          cp "target/${{ matrix.target }}/release/weaveconfig${{ matrix.extension }}" "release/weaveconfig-${{ matrix.target }}${{ matrix.extension }}"
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
