@@ -67,37 +67,10 @@ jobs:
           fi
         shell: bash
 
-      - name: Prepare binary for release (Windows)
-        if: ${{ startsWith(matrix.os, 'windows') }}
-        run: |
-          mkdir release
-          Compress-Archive -Path target\${{ matrix.target }}\release\weaveconfig.exe -DestinationPath release\weaveconfig-${{ matrix.target }}.zip
-        shell: pwsh
-
-      - name: Prepare binary for release (Others)
-        if: ${{ !startsWith(matrix.os, 'windows') }}
-        run: |
-          mkdir -p release
-          zip -j release/weaveconfig-${{ matrix.target }}.zip target/${{ matrix.target }}/release/weaveconfig${{ matrix.extension }}
-        shell: bash
-
-      - name: Generate checksum (Windows)
-        if: ${{ startsWith(matrix.os, 'windows') }}
-        run: |
-          CertUtil -hashfile release\weaveconfig-${{ matrix.target }}.zip SHA256 > release\weaveconfig-${{ matrix.target }}.zip.sha256
-        shell: cmd
-
-      - name: Generate checksum (Others)
-        if: ${{ !startsWith(matrix.os, 'windows') }}
-        run: |
-          shasum -a 256 release/weaveconfig-${{ matrix.target }}.zip > release/weaveconfig-${{ matrix.target }}.zip.sha256
-        shell: bash
-
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release/weaveconfig-${{ matrix.target }}.zip
-            release/weaveconfig-${{ matrix.target }}.zip.sha256
+            target/${{ matrix.target }}/release/weaveconfig${{ matrix.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
