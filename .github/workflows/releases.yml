@@ -49,6 +49,8 @@ jobs:
           override: true
 
       - name: Install cross
+        if: ${{ !startsWith(matrix.os, 'windows') }}
+        shell: bash
         run: |
           if [ "${{ matrix.use-cross }}" = "true" ]; then
             cargo install cross
