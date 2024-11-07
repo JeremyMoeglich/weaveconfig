@@ -12,6 +12,7 @@ use std::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedSpace {
     pub variables: Option<Map<String, Value>>,
+    pub mapping_from_root: HashMap<String, Vec<String>>,
     pub environments: HashSet<String>,
     pub path: PathBuf,
     pub files_to_copy: CopyTree,
@@ -34,6 +35,9 @@ pub fn resolve_spaces(space_graph: SpaceGraph) -> Result<HashMap<String, Resolve
 
     Ok(resolved_spaces)
 }
+
+// The root mapping is the mapping from the ENV variable to this space's environments.
+// Other mappings such as dependency mappings may be omitted.
 
 fn resolve_space(
     name: &str,
@@ -77,8 +81,9 @@ fn resolve_space(
         })?;
     }
 
+    let mut mapping_from_root = space.mapping.clone().unwrap_or_default();
     if let Some(parent_space) = &space.parent_space {
-        resolve_dependency(
+        let parent_space = resolve_dependency(
             parent_space,
             &space.mapping,
             &space.environments,
@@ -88,6 +93,33 @@ fn resolve_space(
             space_graph,
         )
         .with_context(|| format!("Failed to resolve parent for path: {:?}", name))?;
+
+        let mut missing_to_mappings = {
+            let mut needed_mappings: HashSet<&String> = space.environments.iter().collect();
+            needed_mappings.retain(|env| {
+                mapping_from_root
+                    .iter()
+                    .all(|(_, mappings)| !mappings.contains(&env))
+            });
+            needed_mappings
+        };
+
+        let intersecting_environments: HashSet<&String> = parent_space
+            .environments
+            .intersection(&space.environments)
+            .collect();
+
+        for env in intersecting_environments.intersection(&missing_to_mappings.clone()) {
+            mapping_from_root.insert(env.to_string(), vec![env.to_string()]);
+            missing_to_mappings.remove(env);
+        }
+
+        if !missing_to_mappings.is_empty() {
+            return Err(anyhow::anyhow!(
+                "Missing mappings for environments: {:?}",
+                missing_to_mappings
+            ));
+        }
     }
 
     if let Some(variables) = &mut variables {
@@ -111,21 +143,22 @@ fn resolve_space(
             path: space.path.clone(),
             files_to_copy: space.files_to_copy.clone(),
             generate: space.generate.clone(),
+            mapping_from_root,
         },
     );
 
     Ok(())
 }
 
-fn resolve_dependency(
+fn resolve_dependency<'a>(
     dependency_name: &str,
     mapping: &Option<HashMap<String, Vec<String>>>,
     environments: &HashSet<String>,
     variables: &mut Option<Map<String, Value>>,
     visited: &mut HashSet<String>,
-    resolved_spaces: &mut HashMap<String, ResolvedSpace>,
+    resolved_spaces: &'a mut HashMap<String, ResolvedSpace>,
     space_graph: &SpaceGraph,
-) -> Result<()> {
+) -> Result<&'a ResolvedSpace> {
     resolve_space(dependency_name, visited, resolved_spaces, space_graph)
         .with_context(|| format!("Failed to resolve dependency path: {:?}", dependency_name))?;
 
@@ -172,7 +205,7 @@ fn resolve_dependency(
         }
     }
 
-    Ok(())
+    Ok(&resolved_space)
 }
 
 fn copy_key(value: &mut Map<String, Value>, from_key: &str, to_key: &str) {

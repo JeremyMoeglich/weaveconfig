@@ -1,6 +1,6 @@
 [package]
 name = "weaveconfig"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 description = "A unified configuration tool for monorepos"
 readme = "README.md"
@@ -19,7 +19,7 @@ futures = "0.3.30"
 regex = "1.11.0"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
-thiserror = "1.0.64"
+thiserror = "2.0.0"
 tokio = { version = "1.40.0", features = ["full"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

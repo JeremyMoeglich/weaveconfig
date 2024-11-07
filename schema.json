@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "_space.jsonc Schema",
-  "description": "Schema for validating the _space.jsonc configuration file in weaveconfig.",
+  "description": "Schema for _space.jsonc files (version 0.4.0) that define configuration spaces within a weaveconfig directory. A space is any directory containing this file.",
   "type": "object",
   "properties": {
     "$schema": {
@@ -10,38 +10,44 @@
     },
     "name": {
       "type": "string",
-      "description": "The name of the space. This is used to identify the space in the graph. Dependencies reference spaces by their name. It must be unique within the graph."
+      "description": "Unique identifier for this space. Used for dependency references and must be unique across all spaces in the weaveconfig directory.\n\nExample: \"auth-service\"",
+      "minLength": 1
     },
     "dependencies": {
       "type": "array",
-      "description": "List of dependencies for the space. Each element must be a name of another space.",
+      "description": "Names of other spaces this space depends on. These spaces must exist within the weaveconfig directory. Circular dependencies are not allowed.\n\nExample: [\"common\", \"database\"]",
       "items": {
         "type": "string",
-        "description": "A string representing the name of a dependency space."
-      }
+        "description": "Name of a dependency space.",
+        "minLength": 1
+      },
+      "uniqueItems": true
     },
     "mapping": {
       "type": "array",
-      "description": "Mappings of environments from this space to environments in dependencies.",
+      "description": "Defines how environments from the parent and dependency spaces map to environments in this space.\n\nFor root spaces (those without a parent space), this maps environment names from the ENV variable and dependency spaces to the space's environments.\nFor non-root spaces, this maps environment names from the closest parent space (nearest ancestor directory with _space.jsonc) and dependency spaces to the space's environments.\n\nMappings are optional:\n- If omitted, all parent/dependency environments are inherited as-is\n- If provided, you can map all or a subset of environments. Unmapped environments are inherited from the parent\n\nExample: [{\"parent\": \"prod\", \"this\": \"production\"}, {\"parent\": \"dev\", \"this\": \"development\"}]",
       "items": {
         "type": "object",
         "properties": {
           "from": {
             "type": "string",
-            "description": "The name of the environment in the dependency."
+            "description": "Environment name from the parent space (or ENV variable for root spaces) or dependency space.",
+            "minLength": 1
           },
-          "to": {
+          "this": {
             "type": "string",
-            "description": "The name of the environment in this space."
+            "description": "Corresponding environment name in this space. Must exist in this space's environments array.",
+            "minLength": 1
           }
         },
-        "required": ["from", "to"],
+        "required": ["parent", "this"],
         "additionalProperties": false
-      }
+      },
+      "uniqueItems": true
     },
     "environments": {
       "type": "array",
-      "description": "List of environments supported by the space.",
+      "description": "List of environment names supported by this space. These names are used in mappings and must be unique within the space.\n\nExample: [\"development\", \"staging\", \"production\"]",
       "items": {
         "type": "string",
         "minLength": 1
@@ -50,19 +56,19 @@
       "minItems": 1
     },
     "generate": {
-      "description": "Generate configurations or files for the space.",
+      "description": "Configuration generation options for this space. When enabled, generates:\n- gen/config.json: Contains the resolved configuration\n- gen/binding.ts: Provides type-safe access to the configuration",
       "oneOf": [
         {
           "type": "boolean",
-          "description": "A boolean indicating whether to generate default configurations."
+          "description": "When true, generates all available outputs (config.json and binding.ts)."
         },
         {
           "type": "object",
-          "description": "Object providing options for generating configurations.",
+          "description": "Detailed generation options.",
           "properties": {
             "typescript": {
               "type": "boolean",
-              "description": "Whether to generate TypeScript bindings."
+              "description": "When true, generates TypeScript type definitions (binding.ts) for this space's configuration."
             }
           },
           "required": ["typescript"],
