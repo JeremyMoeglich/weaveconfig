@@ -118,6 +118,30 @@ fn resolve_space(
         }
     }
 
+    if let Some(variables) = &variables {
+        let mut environment_keys: HashSet<String> = HashSet::new();
+        for env in &space.environments {
+            let keys: Option<HashSet<String>> = variables
+                .get(env)
+                .map(|v| v.as_object().unwrap().keys().cloned().collect());
+            if let Some(keys) = keys {
+                environment_keys.extend(keys);
+            }
+        }
+
+        // ensure the environment keys do not conflict with the top level keys
+        for key in variables.keys() {
+            if environment_keys.contains(key) {
+                return Err(anyhow::anyhow!(
+                    "Environment key {:?} conflicts with top level key: {:?} in the space {:?}",
+                    key,
+                    environment_keys,
+                    name
+                ));
+            }
+        }
+    }
+
     resolved_spaces.insert(
         name.to_string(),
         ResolvedSpace {
