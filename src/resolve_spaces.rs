@@ -1,4 +1,5 @@
 use crate::{
+    ancestor_mapping::AncestorMapping,
     merging::merge_map_consume,
     space_graph::{CopyTree, GenerateSpace, SpaceGraph},
 };
@@ -12,7 +13,7 @@ use std::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedSpace {
     pub variables: Option<Map<String, Value>>,
-    pub mapping_from_root: HashMap<String, Vec<String>>,
+    pub root_mapping: AncestorMapping,
     pub environments: HashSet<String>,
     pub path: PathBuf,
     pub files_to_copy: CopyTree,
@@ -63,11 +64,38 @@ fn resolve_space(
     visited.insert(name.to_string());
 
     let mut variables = space.variables.clone();
+
+    let mut root_mapping = space.parent_mapping.clone();
+    if let Some(parent_space) = &space.parent_space {
+        let parent_space = resolve_parent(
+            parent_space,
+            &space.parent_mapping,
+            &mut variables,
+            visited,
+            resolved_spaces,
+            space_graph,
+        )
+        .with_context(|| format!("Failed to resolve parent for path: {:?}", name))?;
+
+        // Turn the parents root_mapping and this space's parent_mapping into a root_mapping for this space
+        let mut new_root_mapping = AncestorMapping::new();
+
+        // For each ancestor in the parent's root mapping
+        for (ancestor, parent_space_env) in parent_space.root_mapping.list_ancestor_to_space() {
+            // Look up what this space's environments are for the parent's space environment
+            if let Some(space_envs) = space.parent_mapping.get_space(parent_space_env) {
+                // Add mapping from ancestor to this space's environment
+                new_root_mapping.add_mapping(ancestor.clone(), space_envs.clone())?;
+            }
+        }
+
+        root_mapping = new_root_mapping;
+    }
+
     for dependency in &space.dependencies {
         resolve_dependency(
             dependency,
-            &space.mapping,
-            &space.environments,
+            &root_mapping,
             &mut variables,
             visited,
             resolved_spaces,
@@ -81,57 +109,12 @@ fn resolve_space(
         })?;
     }
 
-    let mut mapping_from_root = space.mapping.clone().unwrap_or_default();
-    if let Some(parent_space) = &space.parent_space {
-        let parent_space = resolve_dependency(
-            parent_space,
-            &space.mapping,
-            &space.environments,
-            &mut variables,
-            visited,
-            resolved_spaces,
-            space_graph,
-        )
-        .with_context(|| format!("Failed to resolve parent for path: {:?}", name))?;
-
-        let mut missing_to_mappings = {
-            let mut needed_mappings: HashSet<&String> = space.environments.iter().collect();
-            needed_mappings.retain(|env| {
-                mapping_from_root
-                    .iter()
-                    .all(|(_, mappings)| !mappings.contains(&env))
-            });
-            needed_mappings
-        };
-
-        let intersecting_environments: HashSet<&String> = parent_space
-            .environments
-            .intersection(&space.environments)
-            .collect();
-
-        for env in intersecting_environments.intersection(&missing_to_mappings.clone()) {
-            mapping_from_root.insert(env.to_string(), vec![env.to_string()]);
-            missing_to_mappings.remove(env);
-        }
-
-        if !missing_to_mappings.is_empty() {
-            return Err(anyhow::anyhow!(
-                "Missing mappings for environments: {:?}",
-                missing_to_mappings
-            ));
-        }
-    }
-
     if let Some(variables) = &mut variables {
         // insert empty object for each environment if not present
         for env in &space.environments {
             variables
                 .entry(env.clone())
                 .or_insert_with(|| Value::Object(Map::new()));
-            if let Some(Value::Object(obj)) = variables.get_mut(env) {
-                obj.entry("env".to_string())
-                    .or_insert(Value::String(env.clone()));
-            }
         }
     }
 
@@ -143,18 +126,63 @@ fn resolve_space(
             path: space.path.clone(),
             files_to_copy: space.files_to_copy.clone(),
             generate: space.generate.clone(),
-            mapping_from_root,
+            root_mapping,
         },
     );
 
     Ok(())
 }
 
+fn resolve_parent<'a>(
+    parent_name: &str,
+    parent_mapping: &AncestorMapping,
+    this_variables: &mut Option<Map<String, Value>>,
+    visited: &mut HashSet<String>,
+    resolved_spaces: &'a mut HashMap<String, ResolvedSpace>,
+    space_graph: &SpaceGraph,
+) -> Result<&'a ResolvedSpace> {
+    resolve_space(parent_name, visited, resolved_spaces, space_graph)
+        .with_context(|| format!("Failed to resolve dependency path: {:?}", parent_name))?;
+
+    let resolved_space = resolved_spaces
+        .get(parent_name)
+        .with_context(|| format!("Resolved space not found for path: {:?}", parent_name))?;
+
+    let mut to_merge = resolved_space.variables.clone();
+
+    for dependency_env in &resolved_space.environments {
+        let space_env = parent_mapping.get_space(dependency_env);
+        if let Some(space_env) = space_env {
+            if let Some(ref mut value) = to_merge {
+                if let Some(moved_value) = value.remove(dependency_env) {
+                    value.insert(space_env.clone(), moved_value.clone());
+                }
+            }
+        }
+    }
+
+    if let Some(to_merge) = to_merge {
+        if let Some(ref mut value) = this_variables {
+            let value_clone = value.clone();
+            let to_merge_clone = to_merge.clone();
+            merge_map_consume(value, to_merge).with_context(|| {
+                format!(
+                    "Failed to merge variables for dependency: {:?}, {:?}, {:?}",
+                    parent_name, value_clone, to_merge_clone
+                )
+            })?;
+        } else {
+            *this_variables = Some(to_merge);
+        }
+    }
+
+    Ok(&resolved_space)
+}
+
 fn resolve_dependency<'a>(
     dependency_name: &str,
-    mapping: &Option<HashMap<String, Vec<String>>>,
-    environments: &HashSet<String>,
-    variables: &mut Option<Map<String, Value>>,
+    root_mapping: &AncestorMapping,
+    this_variables: &mut Option<Map<String, Value>>,
     visited: &mut HashSet<String>,
     resolved_spaces: &'a mut HashMap<String, ResolvedSpace>,
     space_graph: &SpaceGraph,
@@ -168,49 +196,34 @@ fn resolve_dependency<'a>(
 
     let mut to_merge = resolved_space.variables.clone();
 
-    for from_env in &resolved_space.environments {
-        if let Some(mapped_envs) = mapping.as_ref().and_then(|m| m.get(from_env)) {
-            for to_env in mapped_envs {
-                if !environments.contains(to_env) {
-                    return Err(anyhow::anyhow!(
-                        "The target environment '{}' is not defined in space. Available environments: {:?}",
-                        to_env,
-                        environments
-                    ));
-                }
-
-                if let Some(ref mut value) = to_merge {
-                    copy_key(value, from_env, to_env);
-                } else {
-                    return Err(anyhow::anyhow!(
-                        "No variables present to move from '{}' to '{}'",
-                        from_env,
-                        to_env
-                    ));
+    if let Some(to_merge) = to_merge.as_mut() {
+        for dependency_env in &resolved_space.environments {
+            let rooted_dependency_envs = resolved_space.root_mapping.get_ancestors(dependency_env);
+            if let Some(moved_value) = to_merge.remove(dependency_env) {
+                for rooted_dependency_env in rooted_dependency_envs {
+                    let space_env = root_mapping.get_space(rooted_dependency_env);
+                    if let Some(space_env) = space_env {
+                        to_merge.insert(space_env.clone(), moved_value.clone());
+                    }
                 }
             }
         }
     }
 
     if let Some(to_merge) = to_merge {
-        if let Some(ref mut value) = variables {
+        if let Some(ref mut value) = this_variables {
+            let value_clone = value.clone();
+            let to_merge_clone = to_merge.clone();
             merge_map_consume(value, to_merge).with_context(|| {
                 format!(
-                    "Failed to merge variables for dependency: {:?}",
-                    dependency_name
+                    "Failed to merge variables for dependency: {:?}, {:?}, {:?}",
+                    dependency_name, value_clone, to_merge_clone
                 )
             })?;
         } else {
-            *variables = Some(to_merge);
+            *this_variables = Some(to_merge);
         }
     }
 
     Ok(&resolved_space)
-}
-
-fn copy_key(value: &mut Map<String, Value>, from_key: &str, to_key: &str) {
-    if let Some(current) = value.get(from_key) {
-        let copied = current.clone();
-        value.insert(to_key.to_string(), copied);
-    }
 }

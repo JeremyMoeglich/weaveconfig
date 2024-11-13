@@ -27,6 +27,12 @@ pub async fn generate_binding(
         content.push_str("\n");
         content.push_str("export type Environments = typeof environments[number];");
 
+        content.push_str("const mappingFromRoot = ");
+        content.push_str(&format!(
+            "{} as const;",
+            serde_json::to_string(&resolved_space.root_mapping.list_ancestor_to_space())?
+        ));
+
         content.push_str("\n\n// static code starts here, using variant: ");
         if resolved_space.environments.len() == 0 {
             content.push_str("zero_env\n\n");

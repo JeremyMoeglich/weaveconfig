@@ -1,5 +1,8 @@
 declare global {
     var environments: ["sample_env1", "sample_env2"];
+    var mappingFromRoot: {
+        [key: string]: string;
+    };
     type ConfigType = {
         sample_env1: {
             sample_key1: string;

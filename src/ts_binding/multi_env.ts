@@ -147,20 +147,22 @@ function read_config_file(): ConfigType | null {
 }
 
 const config = read_config_file();
-export const usedEnvironment = load_env_variable(
-    __dirname,
-    "ENV",
-) as Environments;
+const env_variable = load_env_variable(__dirname, "ENV");
+
+if (!env_variable) {
+    throw new Error(
+        `ENV is not set, please set ENV variable to one of ${Object.keys(mappingFromRoot).join(", ")}, you can pass this environment variable directly or in a .env file`,
+    );
+}
+
+export const usedEnvironment =
+    mappingFromRoot[env_variable as keyof typeof mappingFromRoot];
 if (!usedEnvironment) {
     throw new Error(
-        `ENV is not set, please set ENV variable to one of ${environments.join(", ")}, you can pass this environment variable directly or in a .env file`,
+        `ENV is set, but is not a known environment, please set ENV variable to one of ${Object.keys(mappingFromRoot).join(", ")}, you can pass this environment variable directly or in a .env file`,
     );
 }
-if (!environments.includes(usedEnvironment)) {
-    throw new Error(
-        `ENV must be one of ${environments.join(", ")} got ${usedEnvironment}`,
-    );
-}
+
 
 type ObjectKeys<T> = {
     [K in keyof T]: T[K] extends object ? K : never;

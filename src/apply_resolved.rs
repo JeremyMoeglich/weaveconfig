@@ -10,6 +10,7 @@ use serde_json::{Map, Value};
 use crate::{
     get_environment_value::get_environment_value,
     map_path::map_path,
+    merging::merge_values_consume,
     resolve_spaces::ResolvedSpace,
     space_graph::{CopyTree, ToCopy},
     template_file::template_file,
@@ -180,7 +181,20 @@ async fn copy_tocopy_with_env(
                 .with_context(|| format!("Failed to read file: {:?}", file))?;
             // Apply variable substitution if variables are provided
             let content = if let Some(variables) = variables {
-                template_file(&content, variables)
+                let mut env_value = if let Some(env) = env {
+                    get_environment_value(variables, env).with_context(|| {
+                        format!(
+                            "Failed to get environment value for '{}' in {:?}",
+                            env, variables
+                        )
+                    })?
+                } else {
+                    variables.clone()
+                };
+                if let Some(env) = env {
+                    env_value.insert("env".to_string(), Value::String(env.to_string()));
+                }
+                template_file(&content, &env_value)
                     .with_context(|| "Failed to apply variable substitution")?
             } else {
                 content

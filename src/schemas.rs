@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use serde::Deserialize;
+use std::collections::{HashMap, HashSet};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 /// The _space.jsonc file.
 /// A space describes a folder and its configuration.
 /// Each space can have multiple environments, each with their own values for the variables in the space.
@@ -14,10 +14,8 @@ pub struct SpaceSchema {
     /// Each element must be a name of another space.
     /// If not present, the space will not import any dependencies.
     pub dependencies: Option<Vec<String>>,
-    /// A mapping between the environments from dependencies to the environments in this space.
-    /// If not present the environments from the dependencies will be used as is.
-    /// If this field is present, the environments field must be set.
-    pub mapping: Option<Vec<MappingSchema>>,
+    /// A mapping from the environments in this space to the environments in the parent space.
+    pub space_to_parent_mapping: Option<HashMap<String, HashSet<String>>>,
     /// A list of environments that this space supports.
     /// An environment describes a particular configuration of the space
     /// for example, prod, dev, staging, etc.
@@ -29,7 +27,7 @@ pub struct SpaceSchema {
     pub generate: Option<GenerateSchema>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
 pub enum GenerateSchema {
     /// Toggle full generation on or off.
@@ -38,17 +36,8 @@ pub enum GenerateSchema {
     Generate(GenerateObjectSchema),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct GenerateObjectSchema {
     /// Toggle the typescript bindings on or off.
     pub typescript: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-/// A mapping between the environments from dependencies to the environments in this space.
-pub struct MappingSchema {
-    /// The name of the environment in the dependency.
-    pub from: String,
-    /// The name of the environment in this space.
-    pub to: String,
 }

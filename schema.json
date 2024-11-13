@@ -23,27 +23,18 @@
       },
       "uniqueItems": true
     },
-    "mapping": {
-      "type": "array",
-      "description": "Defines how environments from the parent and dependency spaces map to environments in this space.\n\nFor root spaces (those without a parent space), this maps environment names from the ENV variable and dependency spaces to the space's environments.\nFor non-root spaces, this maps environment names from the closest parent space (nearest ancestor directory with _space.jsonc) and dependency spaces to the space's environments.\n\nMappings are optional:\n- If omitted, all parent/dependency environments are inherited as-is\n- If provided, you can map all or a subset of environments. Unmapped environments are inherited from the parent\n\nExample: [{\"parent\": \"prod\", \"this\": \"production\"}, {\"parent\": \"dev\", \"this\": \"development\"}]",
-      "items": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "type": "string",
-            "description": "Environment name from the parent space (or ENV variable for root spaces) or dependency space.",
-            "minLength": 1
-          },
-          "this": {
-            "type": "string",
-            "description": "Corresponding environment name in this space. Must exist in this space's environments array.",
-            "minLength": 1
-          }
+    "space_to_parent_mapping": {
+      "type": "object",
+      "description": "Maps environments in this space to environments in the parent space. For root spaces (those without a parent), this maps to the ENV variable values. For non-root spaces, this maps to environments in the closest parent space (nearest ancestor directory with _space.jsonc).\n\nIf omitted, environments are inherited as-is from the parent.\n\nExample: {\"production\": [\"prod\", \"prod-dr\"], \"development\": [\"dev\"]}",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
         },
-        "required": ["parent", "this"],
-        "additionalProperties": false
-      },
-      "uniqueItems": true
+        "uniqueItems": true,
+        "minItems": 1
+      }
     },
     "environments": {
       "type": "array",
@@ -52,8 +43,7 @@
         "type": "string",
         "minLength": 1
       },
-      "uniqueItems": true,
-      "minItems": 1
+      "uniqueItems": true
     },
     "generate": {
       "description": "Configuration generation options for this space. When enabled, generates:\n- gen/config.json: Contains the resolved configuration\n- gen/binding.ts: Provides type-safe access to the configuration",
