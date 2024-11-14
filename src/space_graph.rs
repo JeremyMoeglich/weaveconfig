@@ -74,14 +74,14 @@ fn add_to_spaces_graph(
     let space_name = dir
         .space
         .as_ref()
-        .map(|s| s.schema.name.to_string())
+        .map(|s| s.info.name.to_string())
         .or_else(|| closest_parent_space.clone());
     if let Some(space) = dir.space.take() {
-        let mut mapping = match space.schema.space_to_parent_mapping {
+        let mut mapping = match space.info.space_to_parent_mapping {
             Some(m) => AncestorMapping::from_space_to_ancestors(m)?,
             None => AncestorMapping::new(),
         };
-        let environments = space.schema.environments.unwrap_or_default();
+        let environments = space.info.environments.unwrap_or_default();
         for environment in &environments {
             if !mapping.contains_space(environment) {
                 mapping
@@ -94,16 +94,16 @@ fn add_to_spaces_graph(
         }
 
         let space = Space {
-            name: space.schema.name,
+            name: space.info.name,
             path: dir.path.clone(),
-            dependencies: space.schema.dependencies.unwrap_or_default(),
+            dependencies: space.info.dependencies.unwrap_or_default(),
             parent_mapping: mapping,
             environments,
             variables: space.variables,
             files_to_copy: resolve_files_to_copy(&dir),
             parent_space: closest_parent_space,
             generate: {
-                match space.schema.generate {
+                match space.info.generate {
                     Some(GenerateSchema::Generate(generate)) => GenerateSpace {
                         generate: true,
                         typescript: generate.typescript,

@@ -1,6 +1,6 @@
 [package]
 name = "weaveconfig"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 description = "A unified configuration tool for monorepos"
 readme = "README.md"
@@ -17,6 +17,7 @@ clap = { version = "4.5.18", features = ["cargo", "derive"] }
 fjson = "0.3.1"
 futures = "0.3.30"
 hashlink = "0.9.1"
+jsonschema = { version = "0.26.1", default-features = false }
 lazy_static = "1.5.0"
 regex = "1.11.0"
 serde = { version = "1.0.210", features = ["derive"] }

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 /// The _space.jsonc file.
 /// A space describes a folder and its configuration.
 /// Each space can have multiple environments, each with their own values for the variables in the space.
-pub struct SpaceSchema {
+pub struct SpaceInfo {
     /// The name of the space. This is used to identify the space in the graph.
     /// Dependencies reference spaces by their name.
     /// It must be unique within the graph.

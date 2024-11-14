@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "_space.jsonc Schema",
-  "description": "Schema for _space.jsonc files (version 0.4.0) that define configuration spaces within a weaveconfig directory. A space is any directory containing this file.",
+  "description": "Schema for _space.jsonc files that define configuration spaces within a weaveconfig directory. A space is any directory containing this file.",
   "type": "object",
   "properties": {
     "$schema": {

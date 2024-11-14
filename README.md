@@ -42,6 +42,7 @@ The `_env.jsonc` file contains the actual configuration variables for a space. I
 - Environment-specific variables using `_<env>.env.jsonc` files (e.g. `_prod.env.jsonc`)
 - Variables are merged hierarchically from parent spaces to child spaces
 - JSON/JSONC format is supported for both file types
+- Schema validation via `_schema.jsonc` (if present)
 
 The variables defined in these files will be:
 
@@ -49,6 +50,15 @@ The variables defined in these files will be:
 2. Made available in the generated config.json
 3. Accessible via the TypeScript bindings when enabled
 4. Used to substitute values in other files that are copied to the space from the weaveconfig directory
+5. Validated against the schema defined in `_schema.jsonc` (if present)
+
+## _schema.jsonc
+
+The `_schema.jsonc` file defines a JSON schema that validates the configuration in `_env.jsonc` files. When present:
+
+- If no environment-specific `_env` files exist (like `_prod1.env.jsonc`), it validates the main `_env.jsonc` file
+- If environment-specific configs exist, it validates each one after inlining the contents of the main `_env.jsonc` (if present)
+- If no valid configuration is found, it will raise an error
 
 ## Runtime
 
